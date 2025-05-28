@@ -1,31 +1,267 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.35130.168
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cipric_KV", "cipric_KV\cipric_KV.vcxproj", "{2E1B991E-C194-429F-B14A-071CC5C610FE}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Debug|x64.ActiveCfg = Debug|x64
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Debug|x64.Build.0 = Debug|x64
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Debug|x86.ActiveCfg = Debug|Win32
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Debug|x86.Build.0 = Debug|Win32
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Release|x64.ActiveCfg = Release|x64
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Release|x64.Build.0 = Release|x64
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Release|x86.ActiveCfg = Release|Win32
-		{2E1B991E-C194-429F-B14A-071CC5C610FE}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {8B4ED5E6-04AC-488F-9047-CA19817BC505}
-	EndGlobalSection
-EndGlobal
+#define _CRT_SECURE_NO_WARNINGS
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <time.h>
+
+#define MAX_LINE 512
+#define NUM_QUESTIONS 10
+#define SAFE_FREE(p) do { if (p) { free(p); p = NULL; } } while (0)
+
+// Struktura pitanja
+typedef struct {
+    char* question;
+    char* options[4];
+    char correct; // 'A' - 'D'
+} Question;
+
+// Jokeri
+typedef struct {
+    int polaPolaUsed;
+    int pitajPublikuUsed;
+    int nazoviPrijateljaUsed;
+} Jokers;
+
+// Uklanja \n i \r\n s kraja linije ako postoje
+void trimNewline(char* str) {
+    if (!str) return;
+    size_t len = strlen(str);
+    while (len > 0 && (str[len - 1] == '\n' || str[len - 1] == '\r')) {
+        str[--len] = '\0';
+    }
+}
+
+// Učitavanje pitanja iz datoteke
+int loadQuestions(const char* filename, Question** questionsOut) {
+    FILE* fp = fopen(filename, "r");
+    if (!fp) {
+        perror("Greska pri otvaranju datoteke");
+        return 0;
+    }
+
+    int count = 0;
+    Question* questions = NULL;
+    char line[MAX_LINE];
+
+    while (1) {
+        Question q = { 0 };
+        int valid = 1;
+
+        // Učitavanje pitanja
+        if (!fgets(line, MAX_LINE, fp)) break;
+        trimNewline(line);
+        if (strlen(line) == 0) continue; // preskoči prazne linije
+        q.question = _strdup(line);
+        if (!q.question) {
+            perror("strdup");
+            valid = 0;
+        }
+
+        // Učitavanje 4 odgovora
+        for (int i = 0; i < 4 && valid; ++i) {
+            if (!fgets(line, MAX_LINE, fp)) {
+                valid = 0;
+                break;
+            }
+            trimNewline(line);
+            q.options[i] = _strdup(line);
+            if (!q.options[i]) {
+                perror("strdup");
+                valid = 0;
+                break;
+            }
+        }
+
+        // Učitavanje linije "Točno: X"
+        if (!fgets(line, MAX_LINE, fp)) {
+            valid = 0;
+        }
+        else {
+            trimNewline(line);
+            // tražimo format "Točno: X"
+            if (strlen(line) < 8 || strncmp(line, "Točno: ", 7) != 0) {
+                fprintf(stderr, "Neispravan format točnog odgovora: %s\n", line);
+                valid = 0;
+            }
+            else {
+                char c = line[7];
+                if (c >= 'a' && c <= 'd') c = c - 'a' + 'A'; // mala u velika slova
+                if (c < 'A' || c > 'D') {
+                    fprintf(stderr, "Neispravan točan odgovor: %c\n", c);
+                    valid = 0;
+                }
+                else {
+                    q.correct = c;
+                }
+            }
+        }
+
+        if (!valid) {
+            SAFE_FREE(q.question);
+            for (int i = 0; i < 4; ++i) SAFE_FREE(q.options[i]);
+            fprintf(stderr, "Preskačem neispravno pitanje.\n");
+            continue;
+        }
+
+        Question* tmp = realloc(questions, sizeof(Question) * (count + 1));
+        if (!tmp) {
+            perror("realloc");
+            SAFE_FREE(q.question);
+            for (int i = 0; i < 4; ++i) SAFE_FREE(q.options[i]);
+            break;
+        }
+        questions = tmp;
+        questions[count++] = q;
+    }
+
+    fclose(fp);
+    *questionsOut = questions;
+    return count;
+}
+
+void printQuestion(const Question* q, int index) {
+    printf("\nPitanje %d: %s\n", index + 1, q->question);
+    for (int i = 0; i < 4; ++i) {
+        printf("%c) %s\n", 'A' + i, q->options[i]);
+    }
+}
+
+// Pomoćna funkcija za Pola-Pola joker
+void usePolaPola(const Question* q) {
+    printf("\nJOKER Pola-Pola: uklonit ćemo dva netočna odgovora.\n");
+    int removed = 0;
+    for (int i = 0; i < 4; ++i) {
+        if ('A' + i == q->correct) {
+            printf("%c) %s\n", 'A' + i, q->options[i]);
+        }
+        else if (removed < 2) {
+            removed++;
+            continue;
+        }
+        else {
+            printf("%c) %s\n", 'A' + i, q->options[i]);
+        }
+    }
+}
+
+void usePitajPubliku(const Question* q) {
+    printf("\nJOKER Pitaj publiku:\nPublika smatra da je točan odgovor: %c\n", q->correct);
+}
+
+void useNazoviPrijatelja(const Question* q) {
+    printf("\nJOKER Nazovi prijatelja:\nPrijatelj misli da je odgovor: %c\n", q->correct);
+}
+
+void freeQuestions(Question* questions, int count) {
+    if (!questions) return;
+    for (int i = 0; i < count; ++i) {
+        SAFE_FREE(questions[i].question);
+        for (int j = 0; j < 4; ++j) {
+            SAFE_FREE(questions[i].options[j]);
+        }
+    }
+    SAFE_FREE(questions);
+}
+
+// Miješanje pitanja (Fisher-Yates)
+void shuffleQuestions(Question* questions, int count) {
+    for (int i = count - 1; i > 0; --i) {
+        int j = rand() % (i + 1);
+        Question temp = questions[i];
+        questions[i] = questions[j];
+        questions[j] = temp;
+    }
+}
+
+void runGame(Question* questions, int total) {
+    Jokers jokers = { 0,0,0 };
+    int score = 0;
+    int limit = total < NUM_QUESTIONS ? total : NUM_QUESTIONS;
+    char input;
+
+    for (int i = 0; i < limit; ++i) {
+        printQuestion(&questions[i], i);
+
+        printf("Dostupni jokeri: [1] Pola-Pola %s  [2] Pitaj publiku %s  [3] Nazovi prijatelja %s\n",
+            jokers.polaPolaUsed ? "(iskorišten)" : "",
+            jokers.pitajPublikuUsed ? "(iskorišten)" : "",
+            jokers.nazoviPrijateljaUsed ? "(iskorišten)" : "");
+
+        printf("Unesite odgovor (A-D) ili broj jokera (1-3): ");
+        scanf(" %c", &input);
+
+        // Pretvori mala slova u velika za lakšu provjeru
+        if (input >= 'a' && input <= 'd') input = input - 'a' + 'A';
+
+        if (input >= '1' && input <= '3') {
+            switch (input) {
+            case '1':
+                if (!jokers.polaPolaUsed) {
+                    usePolaPola(&questions[i]);
+                    jokers.polaPolaUsed = 1;
+                }
+                else {
+                    printf("Joker Pola-Pola je već iskorišten.\n");
+                }
+                --i; // ponovi isto pitanje nakon jokera
+                continue;
+            case '2':
+                if (!jokers.pitajPublikuUsed) {
+                    usePitajPubliku(&questions[i]);
+                    jokers.pitajPublikuUsed = 1;
+                }
+                else {
+                    printf("Joker Pitaj publiku je već iskorišten.\n");
+                }
+                --i;
+                continue;
+            case '3':
+                if (!jokers.nazoviPrijateljaUsed) {
+                    useNazoviPrijatelja(&questions[i]);
+                    jokers.nazoviPrijateljaUsed = 1;
+                }
+                else {
+                    printf("Joker Nazovi prijatelja je već iskorišten.\n");
+                }
+                --i;
+                continue;
+            }
+        }
+        else if (input >= 'A' && input <= 'D') {
+            if (input == questions[i].correct) {
+                printf("Točno!\n");
+                score += 1000;
+            }
+            else {
+                printf("Netočno. Točan odgovor je %c.\n", questions[i].correct);
+                break;
+            }
+        }
+        else {
+            printf("Nevažeći unos. Molimo pokušajte ponovno.\n");
+            --i;
+            continue;
+        }
+    }
+
+    printf("\nKraj igre. Osvojili ste %d bodova.\n", score);
+}
+
+int main(void) {
+    srand((unsigned int)time(NULL));
+
+    Question* questions = NULL;
+    int total = loadQuestions("pitanja.txt", &questions);
+    if (total <= 0) {
+        fprintf(stderr, "Nema dostupnih pitanja ili greška pri učitavanju.\n");
+        return EXIT_FAILURE;
+    }
+
+    shuffleQuestions(questions, total);
+
+    runGame(questions, total);
+
+    freeQuestions(questions, total);
+    return EXIT_SUCCESS;
+}

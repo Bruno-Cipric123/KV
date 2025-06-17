@@ -303,3 +303,12 @@ void runGame(Question* questions, int count) {
 
     printf("\nKraj igre. Ukupan broj bodova: %d\n", score);
 }
+int compareQuestions(const void* a, const void* b) {
+    const Question* q1 = (const Question*)a;
+    const Question* q2 = (const Question*)b;
+    return strcmp(q1->question, q2->question);
+}
+
+void sortQuestions(Question* questions, int count) {
+    qsort(questions, count, sizeof(Question), compareQuestions);
+}

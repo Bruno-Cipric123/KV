@@ -41,6 +41,9 @@ void addQuestion(const char* filename);
 void deleteQuestion(const char* filename);
 void shuffleQuestions(Question* questions, int count);
 void runGame(Question* questions, int count);
+void sortQuestions(Question* questions, int count);
+int compareQuestions(const void* a, const void* b);
+
 
 #endif
 

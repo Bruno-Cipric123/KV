@@ -16,6 +16,7 @@ int main() {
         printf("4. Obrisi pitanje\n");
         printf("5. Uredi pitanje\n");
         printf("6. Sortiraj pitanja\n");
+        printf("7. Pretrazi pitanje\n");
         printf("0. Izlaz\n");
         printf("Odabir: ");
 
@@ -73,6 +74,9 @@ int main() {
             }
             break;
         }
+            case 7:
+    searchQuestion(filename);
+    break;
         case IZAĐI:
             return EXIT_SUCCESS;
         default:

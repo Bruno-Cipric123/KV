@@ -312,3 +312,42 @@ int compareQuestions(const void* a, const void* b) {
 void sortQuestions(Question* questions, int count) {
     qsort(questions, count, sizeof(Question), compareQuestions);
 }
+int compareQuestionText(const void* a, const void* b) {
+    const Question* qa = (const Question*)a;
+    const char* text = (const char*)b;
+    return strcmp(qa->question, text);
+}
+
+void searchQuestion(const char* filename) {
+    Question* questions = NULL;
+    int total = loadQuestions(filename, &questions);
+    if (total <= 0) {
+        printf("Nema pitanja za pretragu.\n");
+        return;
+    }
+
+    // Sortiraj prije bsearch-a
+    sortQuestions(questions, total);
+
+    char input[MAX_LINE];
+    printf("Unesite tekst pitanja za pretragu:\n");
+    fgets(input, MAX_LINE, stdin);
+    trimNewline(input);
+
+    Question* found = bsearch(
+        input,
+        questions,
+        total,
+        sizeof(Question),
+        compareQuestionText
+    );
+
+    if (found) {
+        printf("Pitanje pronađeno: %s\n", found->question);
+        printf("Točan odgovor: %c) %s\n", found->correct, found->options[found->correct - 'A']);
+    } else {
+        printf("Pitanje nije pronađeno.\n");
+    }
+
+    freeQuestions(questions, total);
+}

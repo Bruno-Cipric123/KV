@@ -1,19 +1,8 @@
 #define _CRT_SECURE_NO_WARNINGS
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
-#include <errno.h>
 #include <time.h>
-#include "Functions.h"
-
-
-#define MAX_LINE 512
-#define NUM_QUESTIONS 10
-#define SAFE_FREE(p) if (p) { free(p); p = NULL; }
-
-#ifndef _MSC_VER
-#define _strdup strdup
-#endif
+#include "functions.h"
 
 int main() {
     srand((unsigned int)time(NULL));
@@ -26,6 +15,7 @@ int main() {
         printf("3. Pregledaj pitanja\n");
         printf("4. Obrisi pitanje\n");
         printf("5. Uredi pitanje\n");
+        printf("6. Sortiraj pitanja\n");
         printf("0. Izlaz\n");
         printf("Odabir: ");
 
@@ -69,6 +59,20 @@ int main() {
         case UREDI:
             editQuestion(filename);
             break;
+        case 6: {
+            Question* questions = NULL;
+            int total = loadQuestions(filename, &questions);
+            if (total > 0) {
+                sortQuestions(questions, total);
+                saveQuestions(filename, questions, total);
+                printf("Pitanja su sortirana.\n");
+                freeQuestions(questions, total);
+            }
+            else {
+                printf("Nema pitanja za sortiranje.\n");
+            }
+            break;
+        }
         case IZAĐI:
             return EXIT_SUCCESS;
         default:

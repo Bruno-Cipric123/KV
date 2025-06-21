@@ -2,14 +2,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include "functions.h"
+#include "Functions.h"
 
 int main() {
     srand((unsigned int)time(NULL));
     const char* filename = "pitanja.txt";
 
     while (1) {
-        printf("\n===== MILIJUNAS =====\n");
+        printf("\n===== TKO ZELI BITI MILIJUNAS =====\n");
         printf("1. Pokreni igru\n");
         printf("2. Dodaj pitanje\n");
         printf("3. Pregledaj pitanja\n");
@@ -25,7 +25,7 @@ int main() {
         fgets(buffer, sizeof(buffer), stdin);
         if (sscanf(buffer, "%d", &izbor) != 1) continue;
 
-        switch (izbor) {
+        switch ((MenuOption)izbor) {
         case IGRAJ: {
             Question* questions = NULL;
             int total = loadQuestions(filename, &questions);
@@ -33,8 +33,7 @@ int main() {
                 shuffleQuestions(questions, total);
                 runGame(questions, total);
                 freeQuestions(questions, total);
-            }
-            else {
+            } else {
                 printf("Nema dostupnih pitanja.\n");
             }
             break;
@@ -48,13 +47,12 @@ int main() {
             if (total > 0) {
                 printAllQuestions(questions, total);
                 freeQuestions(questions, total);
-            }
-            else {
+            } else {
                 printf("Nema pitanja za prikaz.\n");
             }
             break;
         }
-        case OBRIŠI:
+        case OBRISI:
             deleteQuestion(filename);
             break;
         case UREDI:
@@ -68,19 +66,21 @@ int main() {
                 saveQuestions(filename, questions, total);
                 printf("Pitanja su sortirana.\n");
                 freeQuestions(questions, total);
-            }
-            else {
+            } else {
                 printf("Nema pitanja za sortiranje.\n");
             }
             break;
         }
-            case 7:
-    searchQuestion(filename);
-    break;
-        case IZAĐI:
+        case 7:
+            searchQuestion(filename);
+            break;
+        case IZADI:
+            printf("Izlaz iz programa.\n");
             return EXIT_SUCCESS;
         default:
             printf("Nepoznata opcija.\n");
         }
     }
+
+    return EXIT_SUCCESS;
 }

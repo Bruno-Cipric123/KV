@@ -2,6 +2,8 @@
 #ifndef FUNCTIONS_H
 #define FUNCTIONS_H
 
+#include <stddef.h>
+
 #define MAX_LINE 512
 #define NUM_QUESTIONS 10
 #define SAFE_FREE(p) if (p) { free(p); p = NULL; }
@@ -19,11 +21,11 @@ typedef struct {
 } Jokers;
 
 typedef enum {
-    IZAĐI = 0,
+    IZADI = 0,
     IGRAJ = 1,
     DODAJ,
     PREGLED,
-    OBRIŠI,
+    OBRISI,
     UREDI
 } MenuOption;
 
@@ -42,11 +44,6 @@ void deleteQuestion(const char* filename);
 void shuffleQuestions(Question* questions, int count);
 void runGame(Question* questions, int count);
 void sortQuestions(Question* questions, int count);
-int compareQuestions(const void* a, const void* b);
 void searchQuestion(const char* filename);
 
-
-
-
-#endif
-
+#endif // FUNCTIONS_H
